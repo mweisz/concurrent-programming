@@ -6,27 +6,30 @@ trait H2O {
 }
 
 class H2OJVM extends H2O {
+    private val monitor = new Monitor
     private var hs, os = 0
     private var hsMayBond = 0
 
-    def H: Unit = synchronized {
+    private val hHasArrived, hMayBond = monitor.newCondition
+
+    def H: Unit = monitor.withLock {
         hs += 1
 
         // Notify (potentially) waiting O's that new H has arrived
-        notifyAll()
+        hHasArrived.signal()
 
         // Wait until it may bond
-        while (hsMayBond == 0) wait()
+        while (hsMayBond == 0) hMayBond.await()
 
         hsMayBond -= 1
         hs -= 1
     }
 
-    def O: Unit = synchronized { 
+    def O: Unit = monitor.withLock { 
         os += 1
 
         // Wait until we have two Hs and one O
-        while (!(hs >= 2 && os >= 1)) wait()
+        while (!(hs >= 2 && os >= 1)) hHasArrived.await()
 
         os -= 1
 
@@ -34,7 +37,7 @@ class H2OJVM extends H2O {
         hsMayBond += 2
 
         // Notifiy them
-        notifyAll()
+        hMayBond.signalAll()
     }
 }
 
