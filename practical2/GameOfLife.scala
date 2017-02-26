@@ -16,8 +16,6 @@ object GameOfLife {
         val displayWorker = createDisplayWorker()
         val workers = || (for (i <- 0 until p) yield createWorker("Worker " + i, i))
         run(workers || displayWorker)
-
-
     }
 
     def generateBoard(N : Int): Array[Array[Boolean]] = {
@@ -25,7 +23,7 @@ object GameOfLife {
         
         // Random Init
         val rand = scala.util.Random
-        for (_ <- 0 to 2000) {
+        for (_ <- 0 to ((N*N) / 3).toInt) {
             val x = rand.nextInt(N)
             val y = rand.nextInt(N)
 
