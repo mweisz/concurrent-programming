@@ -4,16 +4,19 @@ object GameOfLife {
     val N = 100                                         // Board size
     val board = generateBoard(N)                        // Board of size N*N
     val p = 5                                           // Number of workers
+    val MAX_ITERATIONS = 500                            // Maximum numbers of iterations
     val display = new Display(N, board)                 // Window to display board
 
     // Synchronisation
-    val barrier = new Barrier(p)
+    val barrier = new Barrier(p+1)                      // Barrier to sync p workers and 1 display worker
 
 
     def main(args: Array[String]) {
         // Create workers and run them concurrently
+        val displayWorker = createDisplayWorker()
         val workers = || (for (i <- 0 until p) yield createWorker("Worker " + i, i))
-        run(workers)
+        run(workers || displayWorker)
+
 
     }
 
@@ -45,9 +48,7 @@ object GameOfLife {
 
         while(!finished) {
             barrier.sync // Make sure they all have written their rows
-
-            display.draw
-            Thread.sleep(50)
+            // Thread.sleep(50)
 
             val updatedRows = computeUpdatedRows(startRow, numRows)
 
@@ -55,12 +56,30 @@ object GameOfLife {
             writeUpdatedRows(startRow, numRows, updatedRows)
 
             iteration += 1
-            println("Iteration " + iteration)
-            if (iteration >= 100) {
-                println(name + " finished.")
+            if (iteration >= MAX_ITERATIONS) {
                 finished = true
             }
         }
+    }
+
+    def createDisplayWorker() = proc {
+        var iteration = 0
+        var finished = false
+        while(!finished) {
+            
+            barrier.sync
+            Thread.sleep(50) // ms
+            display.draw
+            iteration += 1
+            println("Iteration: " + iteration)
+            
+            barrier.sync    
+
+            if (iteration >= MAX_ITERATIONS) {
+                finished = true
+            }
+        }
+        
     }
 
     def computeUpdatedRows(startRow : Int, rowCount : Int): Array[Array[Boolean]] = {
